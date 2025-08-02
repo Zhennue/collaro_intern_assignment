@@ -1,12 +1,11 @@
-# Design Choices Document
+# Design Choices & What I Learned
 
-## 1. State Management Architecture
+## State Management - Keeping It Simple
 
-### Complex State Management for Main Table (Filters, Sorting)
+I went with local React state using `useState` hooks instead of something like Redux or Context API. Honestly, for a dashboard this size, it felt like overkill to bring in heavy state management.
 
-The application employs a **local component state** approach using React's `useState` hooks for managing the main table's complex state. This design choice was made for several key reasons:
+Here's how I structured the main table state in [`CustomerTable.jsx`](frontend/src/app/components/CustomerTable.jsx:23-30):
 
-**State Structure in [`CustomerTable.jsx`](frontend/src/app/components/CustomerTable.jsx:23-30):**
 ```javascript
 const [customers, setCustomers] = useState([]);
 const [page, setPage] = useState(1);
@@ -18,15 +17,13 @@ const [loading, setLoading] = useState(true);
 const [error, setError] = useState(null);
 ```
 
-**Benefits of This Approach:**
-- **Simplicity**: For a dashboard with moderate complexity, local state provides the most straightforward implementation
-- **Performance**: Direct state updates trigger efficient re-renders only for affected components
-- **Maintainability**: State logic is co-located with the component that uses it, making it easier to understand and debug
-- **Server-Side Synchronization**: The state automatically syncs with backend through the [`useEffect`](frontend/src/app/components/CustomerTable.jsx:32-58) dependency array `[page, limit, sortBy, order]`
+Why I chose this approach:
+- **Simple to debug** - All the state is right there in the component
+- **Fast to implement** - No boilerplate, just useState and go
+- **Good enough performance** - React's pretty smart about re-renders
+- **Auto-syncs with backend** - The useEffect with dependencies handles server calls automatically
 
-### Individual Row States (Expanded, Loading, Editing)
-
-Each customer row manages its own state independently through the [`CustomerRow`](frontend/src/app/components/CustomerRow.jsx:21-26) component:
+For individual rows, each [`CustomerRow`](frontend/src/app/components/CustomerRow.jsx:21-26) manages its own state:
 
 ```javascript
 const [expanded, setExpanded] = useState(false);
@@ -36,129 +33,65 @@ const [editingStatus, setEditingStatus] = useState(false);
 const [ordersError, setOrdersError] = useState(null);
 ```
 
-**Design Rationale:**
-- **Isolation**: Each row's state is independent, preventing cascading updates
-- **Lazy Loading**: Orders are only fetched when a row is expanded, optimizing performance
-- **Granular Control**: Individual rows can be in different states (some expanded, some loading, some editing)
-- **Memory Efficiency**: Collapsed rows don't maintain order data in memory
+This keeps things isolated - when you expand one row, it doesn't affect the others. Plus, orders only get loaded when you actually need them.
 
-## 2. API Design Philosophy
+## API Design - Split It Up
 
-### Separation of Customer and Order Endpoints
+I split the API into two main endpoints instead of trying to cram everything into one:
 
-The API follows a **resource-based RESTful design** with clear separation between customer and order endpoints:
+**Customer list**: [`GET /api/customers`](backend/routes/customers.js:6-25)
+- Just the customer info with pagination and sorting
+- No nested order data to keep it fast
 
-**Customer Endpoint:** [`GET /api/customers`](backend/routes/customers.js:6-25)
-- Handles pagination, sorting, and filtering
-- Returns customer summaries without nested order data
-- Optimized for table display performance
+**Customer orders**: [`GET /api/customers/:id/orders`](backend/routes/customers.js:27-32)
+- Loads order details only when you expand a row
+- Keeps the initial page load snappy
 
-**Order Endpoint:** [`GET /api/customers/:id/orders`](backend/routes/customers.js:27-32)
-- Fetches detailed order data for a specific customer
-- Loaded on-demand when customer row is expanded
+This was actually a lesson learned from a previous project where I tried to load everything at once and the initial page load was painfully slow. Now I'm a big fan of lazy loading data.
 
-### Benefits of This Approach
+Benefits I noticed:
+- Way faster initial load
+- Less memory usage (collapsed rows don't hold order data)
+- Easier to cache different types of data separately
+- Backend can optimize each endpoint differently
 
-1. **Performance Optimization**
-   - Initial page load only fetches customer summaries
-   - Order data is loaded lazily, reducing initial payload size
-   - Prevents over-fetching of data that may never be viewed
+## The Biggest Challenge - Nested Inline Editing
 
-2. **Scalability**
-   - Separate endpoints can be optimized independently
-   - Customer endpoint can implement efficient pagination
-   - Order endpoint can handle complex nested data structures
+This was definitely the trickiest part. I needed to handle editing at multiple levels:
+- Customer status editing
+- Order item size editing (nested inside expanded rows)
 
-3. **Caching Strategy**
-   - Customer list can be cached at the application level
-   - Order data can be cached per customer ID
-   - Different cache invalidation strategies for different data types
-
-4. **Network Efficiency**
-   - Reduces bandwidth usage by fetching only necessary data
-   - Enables progressive data loading based on user interaction
-   - Supports better error handling for different data types
-
-5. **Backend Flexibility**
-   - Each endpoint can have different authentication/authorization rules
-   - Allows for different data sources (customers from one DB, orders from another)
-   - Enables microservices architecture in the future
-
-## 3. Biggest Technical Challenge: Nested Inline Editing
-
-### The Challenge
-
-The most complex technical challenge was implementing **nested inline editing** for order item sizes within the expandable customer rows. This involved:
-
-- Managing editing state at multiple levels (customer → order → order item)
-- Handling complex nested data structures with custom size objects
-- Maintaining UI consistency across different editing contexts
-- Ensuring data integrity during concurrent edits
-
-### The Solution
-
-**Multi-Level State Management:**
-
-1. **Customer Level** ([`CustomerRow.jsx`](frontend/src/app/components/CustomerRow.jsx:25)): 
-   ```javascript
-   const [editingStatus, setEditingStatus] = useState(false);
-   ```
-
-2. **Order Item Level** ([`InlineSizeEditor.jsx`](frontend/src/app/components/InlineSizeEditor.jsx:13-14)):
-   ```javascript
-   const [editing, setEditing] = useState(false);
-   const [size, setSize] = useState(item.customSize);
-   ```
-
-**Key Technical Solutions:**
-
-1. **Component Isolation**: Each [`InlineSizeEditor`](frontend/src/app/components/InlineSizeEditor.jsx) manages its own editing state independently
-2. **Optimistic Updates**: Local state updates immediately while API calls happen in background
-3. **Rollback Mechanism**: [`handleCancel`](frontend/src/app/components/InlineSizeEditor.jsx:29-32) function restores original values
-4. **Validation**: Input constraints prevent invalid size values ([`inputProps={{ min: 0, max: 60 }}`](frontend/src/app/components/InlineSizeEditor.jsx:46))
-
-**Data Flow Architecture:**
+The complexity came from managing state across this hierarchy:
 ```
 CustomerTable → CustomerRow → OrdersTable → InlineSizeEditor
-     ↓              ↓             ↓              ↓
-  Pagination    Expansion    Display Items   Edit Sizes
 ```
 
-**Error Handling Strategy:**
-- Graceful degradation when backend is unavailable
-- User-friendly error messages with retry options
-- Consistent loading states across all editing interfaces
+### How I solved it
 
-## 4. Next Priority: Advanced State Management Refactor
+Each editing component manages its own state independently. The [`InlineSizeEditor`](frontend/src/app/components/InlineSizeEditor.jsx:13-14) looks like this:
 
-### If I Had Another Day: Implement Context-Based State Management
-
-**The Feature: Global State Management with React Context**
-
-I would prioritize implementing a **React Context + useReducer** pattern to replace the current local state management approach.
-
-### Why This Refactor?
-
-1. **Scalability Concerns**
-   - Current local state approach doesn't scale well with additional features
-   - Adding filters, search, or bulk operations would require prop drilling
-   - State synchronization between components becomes complex
-
-2. **User Experience Improvements**
-   - Preserve user's table state (sorting, pagination) when navigating
-   - Implement optimistic updates for better perceived performance
-   - Add undo/redo functionality for editing operations
-
-3. **Developer Experience**
-   - Centralized state logic makes debugging easier
-   - Consistent state management patterns across components
-   - Better testability with predictable state transitions
-
-### Implementation Plan
-
-**Context Structure:**
 ```javascript
-// CustomerContext.js
+const [editing, setEditing] = useState(false);
+const [size, setSize] = useState(item.customSize);
+```
+
+Key decisions that made this work:
+1. **Optimistic updates** - UI updates immediately, API call happens in background
+2. **Cancel functionality** - [`handleCancel`](frontend/src/app/components/InlineSizeEditor.jsx:29-32) restores original values if something goes wrong
+3. **Input validation** - Size constraints prevent invalid values
+4. **Independent state** - Each editor doesn't know or care about others
+
+The hardest part was getting the data flow right. I went through a few iterations where editing one item would mess up others, or the state would get out of sync. The solution was keeping each editor completely isolated.
+
+## What I'd Do Differently
+
+If I had more time (or was building this for production), I'd probably implement a proper state management solution. Not because the current approach is wrong, but because it would make adding features easier.
+
+### React Context + useReducer
+
+I'd set up something like:
+
+```javascript
 const CustomerContext = createContext();
 
 const customerReducer = (state, action) => {
@@ -173,23 +106,26 @@ const customerReducer = (state, action) => {
 };
 ```
 
-**Benefits:**
-- **Predictable State Updates**: All state changes go through the reducer
-- **Time-Travel Debugging**: Easy to implement with Redux DevTools
-- **Optimistic Updates**: Update UI immediately, sync with server later
-- **Offline Support**: Queue actions when offline, sync when online
-- **Performance**: Selective re-rendering with context selectors
+Why this would be better:
+- **Predictable state changes** - Everything goes through the reducer
+- **Easier debugging** - Could hook up Redux DevTools
+- **Better for teams** - More structured approach
+- **Undo/redo support** - Would be straightforward to add
+- **Bulk operations** - Could easily add "select all" type features
 
-**Migration Strategy:**
-1. Implement context alongside existing local state
-2. Gradually migrate components one by one
-3. Add advanced features (undo/redo, bulk operations)
-4. Remove old local state management
+### Migration strategy
 
-This refactor would transform the application from a simple dashboard into a robust, enterprise-ready customer management system with advanced state management capabilities.
+I'd probably do it gradually:
+1. Add context alongside existing state
+2. Move components over one by one
+3. Add the fancy features (undo, bulk edit, etc.)
+4. Clean up the old local state
 
----
+## Lessons Learned
 
-## Summary
+1. **Start simple** - Local state was perfect for getting this working quickly
+2. **Lazy loading is your friend** - Don't load data until you need it
+3. **Isolated state is easier to debug** - Each component managing its own state made troubleshooting much easier
+4. **Optimistic updates feel fast** - Update the UI immediately, sync with server later
 
-The current architecture prioritizes **simplicity and maintainability** over complex state management solutions. The design choices reflect a pragmatic approach suitable for the current scope while providing a solid foundation for future enhancements. The separation of concerns between API endpoints, component-level state management, and progressive data loading creates a scalable and performant user experience.
+The current setup works well for what it is - a focused dashboard with moderate complexity. It's maintainable, performs well, and was quick to build. Sometimes that's exactly what you need.

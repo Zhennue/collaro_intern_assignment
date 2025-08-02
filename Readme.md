@@ -1,213 +1,117 @@
 # Collaro Customer Dashboard
 
-A full-stack customer management dashboard built with Next.js, React, Material-UI, and Express.js. This application provides an interactive interface for managing customers, their orders, and order items with advanced table manipulations and inline editing capabilities.
+This is a customer management dashboard I built using Next.js and React. It's got a backend API with Express and uses Material-UI for the frontend components. The main thing it does is let you browse through customers, see their orders, and edit some stuff inline.
 
-## 🚀 Features
+## What it does
 
-- **Customer Management**: View and manage customer information with expandable rows
-- **Order Tracking**: Detailed order management with nested data structure
-- **Interactive Tables**: Sorting, pagination, and inline editing functionality
-- **Material-UI Components**: Modern, responsive design using MUI
-- **Real-time Updates**: Dynamic status and size editing with immediate feedback
-- **Multi-level Data**: Complex relational data structure (Customers → Orders → Order Items)
+- Browse customers in a table with sorting and pagination
+- Click on any customer row to see their orders
+- Edit customer status and order item sizes right in the table
+- Everything updates in real-time without page refreshes
+- Works on mobile too (responsive design)
 
-## 📋 Prerequisites
+## Getting it running
 
-Before you begin, ensure you have the following installed on your system:
+You'll need Node.js installed (version 16 or newer should work fine).
 
-- **Node.js** (version 16.0 or higher)
-- **npm** (comes with Node.js)
-
-You can check your versions by running:
-```bash
-node --version
-npm --version
-```
-
-## 🛠️ Installation & Setup
-
-### 1. Clone the Repository
-
+First, clone this repo and navigate into it:
 ```bash
 git clone <your-repository-url>
 cd collaro_intern_assignment
 ```
 
-### 2. Backend Setup
-
-Navigate to the backend directory and install dependencies:
+### Backend setup
 
 ```bash
 cd backend
 npm install
-```
-
-The backend uses the following dependencies:
-- Express.js for the server
-- CORS for cross-origin requests
-- dotenv for environment variables
-- Faker.js for mock data generation
-- date-fns for date manipulation
-
-### 3. Frontend Setup
-
-Navigate to the frontend directory and install dependencies:
-
-```bash
-cd ../frontend
-npm install
-```
-
-The frontend uses:
-- Next.js 15.4.5 with React 19.1.0
-- Material-UI (MUI) for components and styling
-- Emotion for CSS-in-JS styling
-- Faker.js for additional mock data
-- date-fns for date formatting
-
-## 🚀 Running the Application
-
-### Method 1: Run Both Services Separately (Recommended)
-
-#### Start the Backend Server
-
-1. Open a terminal and navigate to the backend directory:
-```bash
-cd backend
-```
-
-2. Start the development server:
-```bash
 npm run dev
 ```
 
-The backend server will start on `http://localhost:3001` (or the port specified in your environment variables).
+This starts the API server on port 3001. It uses some mock data I generated with Faker.js.
 
-#### Start the Frontend Application
+### Frontend setup
 
-1. Open a **new terminal** and navigate to the frontend directory:
+Open another terminal:
 ```bash
 cd frontend
-```
-
-2. Start the Next.js development server:
-```bash
+npm install
 npm run dev
 ```
 
-The frontend application will start on `http://localhost:3000`.
+The frontend runs on port 3000. Once both are running, just go to http://localhost:3000 in your browser.
 
-### Method 2: Using Separate Terminal Windows
-
-1. **Terminal 1 (Backend)**:
-```bash
-cd backend && npm run dev
-```
-
-2. **Terminal 2 (Frontend)**:
-```bash
-cd frontend && npm run dev
-```
-
-## 🌐 Accessing the Application
-
-Once both servers are running:
-
-1. Open your web browser
-2. Navigate to `http://localhost:3000`
-3. The application should load with the customer dashboard
-
-## 📁 Project Structure
+## How it's organized
 
 ```
 collaro_intern_assignment/
 ├── backend/
-│   ├── data/
-│   │   └── mockData.js          # Mock customer and order data
-│   ├── routes/
-│   │   └── customers.js         # Customer API routes
-│   ├── .env                     # Environment variables
-│   ├── package.json             # Backend dependencies
-│   └── server.js                # Express server setup
+│   ├── data/mockData.js     # Fake customer/order data
+│   ├── routes/customers.js  # API endpoints
+│   ├── server.js           # Express server
+│   └── package.json
 ├── frontend/
-│   ├── src/
-│   │   └── app/
-│   │       ├── components/      # React components
-│   │       ├── lib/            # Utility functions and API calls
-│   │       ├── globals.css     # Global styles
-│   │       ├── layout.js       # App layout
-│   │       ├── page.js         # Main page component
-│   │       └── theme.js        # MUI theme configuration
-│   ├── public/                 # Static assets
-│   ├── package.json            # Frontend dependencies
-│   └── next.config.mjs         # Next.js configuration
-└── README.md                   # This file
+│   ├── src/app/
+│   │   ├── components/     # React components
+│   │   ├── lib/           # API calls and utilities
+│   │   ├── page.js        # Main dashboard page
+│   │   └── theme.js       # Material-UI theme
+│   └── package.json
+└── README.md
 ```
 
-## 🔧 Available Scripts
+## The main components
 
-### Backend Scripts
-- `npm run dev` - Start the development server with nodemon (auto-restart on changes)
+- **CustomerTable**: The main table with pagination and sorting
+- **CustomerRow**: Individual customer rows that expand to show orders
+- **OrdersTable**: Shows orders when you expand a customer
+- **InlineSizeEditor**: Lets you edit order item sizes directly in the table
+- **InlineStatusEditor**: Edit customer status inline
 
-### Frontend Scripts
-- `npm run dev` - Start the Next.js development server
-- `npm run build` - Build the application for production
-- `npm run start` - Start the production server
-- `npm run lint` - Run ESLint for code quality checks
+## API endpoints
 
-## 🐛 Troubleshooting
+- `GET /api/customers` - Gets paginated customer list with sorting
+- `GET /api/customers/:id/orders` - Gets orders for a specific customer
 
-### Common Issues
+The API supports query parameters for pagination (`page`, `limit`) and sorting (`sortBy`, `order`).
 
-1. **Port Already in Use**
-   - If port 3000 or 3001 is already in use, you can specify different ports:
-   - Backend: Set `PORT=3002` in your `.env` file
-   - Frontend: Next.js will automatically suggest an alternative port
+## Troubleshooting
 
-2. **Dependencies Not Installing**
-   - Clear npm cache: `npm cache clean --force`
-   - Delete `node_modules` and `package-lock.json`, then run `npm install` again
+**Port conflicts**: If 3000 or 3001 are taken, the apps will usually suggest alternative ports.
 
-3. **CORS Issues**
-   - Ensure the backend server is running before starting the frontend
-   - Check that the API endpoints in the frontend match the backend URLs
+**CORS issues**: Make sure the backend is running before starting the frontend.
 
-4. **Module Not Found Errors**
-   - Make sure you're in the correct directory when running commands
-   - Verify all dependencies are installed with `npm install`
+**Dependencies not installing**: Try clearing npm cache with `npm cache clean --force` and deleting node_modules, then reinstall.
 
-## 🔄 Development Workflow
+**Module not found**: Double-check you're in the right directory when running commands.
 
-1. Make sure both backend and frontend servers are running
-2. The frontend will automatically reload when you make changes
-3. The backend will restart automatically when you modify server files (thanks to nodemon)
-4. Check the browser console and terminal for any error messages
+## Tech stack
 
-## 📝 API Endpoints
+**Frontend:**
+- Next.js 15.4.5
+- React 19.1.0
+- Material-UI for components
+- Emotion for styling
 
-The backend provides the following API endpoints:
+**Backend:**
+- Express.js
+- CORS middleware
+- Faker.js for mock data
+- date-fns for date handling
 
-- `GET /api/customers` - Retrieve all customers with pagination and search
-- `GET /api/customers/:id/orders` - Get orders for a specific customer
+## Features I implemented
 
-## 🎨 UI Features
+The assignment asked for React/Next.js with Material-UI, complex data structures, and advanced table functionality. Here's what I built:
 
-- **Expandable Rows**: Click on customer rows to view their orders
-- **Inline Editing**: Edit customer status and order item sizes directly in the table
-- **Sorting**: Click column headers to sort data
-- **Pagination**: Navigate through large datasets efficiently
-- **Responsive Design**: Works on desktop and mobile devices
+- Multi-level data (customers → orders → order items)
+- Expandable table rows
+- Inline editing for different data types
+- Sorting and pagination
+- Responsive design
+- Real-time updates
 
-## 📄 Assignment Requirements Met
-
-✅ **React & Next.js Implementation**: Uses Next.js 15.4.5 with React 19.1.0  
-✅ **Material-UI Integration**: Full MUI component library implementation  
-✅ **Complex Multi-level Data**: Customer → Orders → Order Items hierarchy  
-✅ **Advanced Table Manipulations**: Sorting, pagination, expandable rows, inline editing  
-✅ **Interactive Dashboard**: Master-detail views with smooth transitions  
+The trickiest part was getting the nested inline editing to work smoothly - managing state across multiple component levels while keeping the UI responsive.
 
 ---
 
-**Happy coding! 🎉**
-
-For any issues or questions, please check the troubleshooting section above or review the code comments for additional guidance.
+That's about it! The code is pretty well commented if you want to dig into the implementation details.
