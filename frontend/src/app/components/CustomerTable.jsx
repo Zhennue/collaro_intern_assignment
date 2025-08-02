@@ -1,5 +1,21 @@
 "use client";
 import { useEffect, useState } from "react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  Button,
+  Box,
+  Typography,
+  TableSortLabel,
+  Pagination,
+  Stack,
+  CircularProgress
+} from '@mui/material';
 import { fetchCustomers } from "../lib/api";
 import CustomerRow from "./CustomerRow";
 
@@ -10,74 +26,163 @@ export default function CustomerTable() {
   const [sortBy, setSortBy] = useState("name");
   const [order, setOrder] = useState("asc");
   const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    fetchCustomers(page, limit, sortBy, order).then(({ customers, total }) => {
-      setCustomers(customers);
-      setTotal(total);
-    });
+    const loadCustomers = async () => {
+      setLoading(true);
+      setError(null);
+      
+      try {
+        const { customers, total, error } = await fetchCustomers(page, limit, sortBy, order);
+        
+        if (error) {
+          setError(error);
+          setCustomers([]);
+          setTotal(0);
+        } else {
+          setCustomers(customers);
+          setTotal(total);
+        }
+      } catch (err) {
+        setError('Failed to load customers');
+        setCustomers([]);
+        setTotal(0);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadCustomers();
   }, [page, limit, sortBy, order]);
 
-  return (
-    <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl overflow-hidden border border-white/20">
-      <div className="overflow-x-auto">
-        <table className="min-w-full">
-          <thead className="bg-gradient-to-r from-indigo-600 to-purple-600">
-            <tr>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider">
-                Expand
-              </th>
-              {["name", "email", "status", "orderCount", "revenue"].map((col) => (
-                <th
-                  key={col}
-                  onClick={() => {
-                    setSortBy(col);
-                    setOrder(order === "asc" ? "desc" : "asc");
-                  }}
-                  className="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider cursor-pointer hover:bg-white/10 transition-colors duration-200"
-                >
-                  <div className="flex items-center space-x-1">
-                    <span>{col.replace(/([A-Z])/g, ' $1').trim().toUpperCase()}</span>
-                    {sortBy === col && (
-                      <span className="text-yellow-300">
-                        {order === "asc" ? "↑" : "↓"}
-                      </span>
-                    )}
-                  </div>
-                </th>
-              ))}
-              <th className="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider">
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white/50 divide-y divide-gray-200/50">
-            {customers.map((c, index) => (
-              <CustomerRow key={c.id} customer={c} index={index} />
-            ))}
-          </tbody>
-        </table>
-      </div>
+  const handleSort = (column) => {
+    const isAsc = sortBy === column && order === 'asc';
+    setSortBy(column);
+    setOrder(isAsc ? 'desc' : 'asc');
+  };
 
-      <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-4 flex justify-between items-center border-t border-gray-200/50">
-        <button
-          disabled={page === 1}
-          onClick={() => setPage(page - 1)}
-          className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors duration-200 font-medium"
-        >
-          Previous
-        </button>
-        <span className="text-gray-700 font-medium bg-white px-4 py-2 rounded-lg shadow-sm">
-          Page {page} of {Math.ceil(total / limit)}
-        </span>
-        <button
-          disabled={page * limit >= total}
-          onClick={() => setPage(page + 1)}
-          className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors duration-200 font-medium"
-        >
-          Next
-        </button>
-      </div>
-    </div>
+  const handlePageChange = (event, newPage) => {
+    setPage(newPage);
+  };
+
+  const totalPages = Math.ceil(total / limit);
+
+  if (loading) {
+    return (
+      <Paper elevation={3} sx={{ borderRadius: 3, overflow: 'hidden', p: 4 }}>
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight={200}>
+          <CircularProgress size={40} />
+          <Typography variant="body1" sx={{ ml: 2 }}>
+            Loading customers...
+          </Typography>
+        </Box>
+      </Paper>
+    );
+  }
+
+  if (error) {
+    return (
+      <Paper elevation={3} sx={{ borderRadius: 3, overflow: 'hidden', p: 4 }}>
+        <Box display="flex" flexDirection="column" alignItems="center" minHeight={200} justifyContent="center">
+          <Typography variant="h6" color="error" gutterBottom>
+            Unable to load customers
+          </Typography>
+          <Typography variant="body2" color="text.secondary" textAlign="center" mb={2}>
+            {error}
+          </Typography>
+          <Button
+            variant="contained"
+            onClick={() => window.location.reload()}
+            sx={{ textTransform: 'none' }}
+          >
+            Retry
+          </Button>
+        </Box>
+      </Paper>
+    );
+  }
+
+  return (
+    <Paper elevation={3} sx={{ borderRadius: 3, overflow: 'hidden' }}>
+      <TableContainer>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell sx={{ width: 60 }}>
+                Expand
+              </TableCell>
+              {[
+                { key: 'name', label: 'Name' },
+                { key: 'email', label: 'Email' },
+                { key: 'status', label: 'Status' },
+                { key: 'orderCount', label: 'Order Count' },
+                { key: 'revenue', label: 'Revenue' }
+              ].map((column) => (
+                <TableCell key={column.key}>
+                  <TableSortLabel
+                    active={sortBy === column.key}
+                    direction={sortBy === column.key ? order : 'asc'}
+                    onClick={() => handleSort(column.key)}
+                    sx={{
+                      color: 'white !important',
+                      '& .MuiTableSortLabel-icon': {
+                        color: '#fbbf24 !important'
+                      }
+                    }}
+                  >
+                    {column.label}
+                  </TableSortLabel>
+                </TableCell>
+              ))}
+              <TableCell>
+                Actions
+              </TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {customers.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={7} sx={{ textAlign: 'center', py: 4 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    No customers found
+                  </Typography>
+                </TableCell>
+              </TableRow>
+            ) : (
+              customers.map((customer, index) => (
+                <CustomerRow key={customer.id} customer={customer} index={index} />
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </TableContainer>
+
+      <Box 
+        sx={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          p: 2,
+          backgroundColor: 'grey.50'
+        }}
+      >
+        <Typography variant="body2" color="text.secondary">
+          Showing {((page - 1) * limit) + 1} to {Math.min(page * limit, total)} of {total} customers
+        </Typography>
+        
+        <Stack direction="row" spacing={2} alignItems="center">
+          <Pagination
+            count={totalPages}
+            page={page}
+            onChange={handlePageChange}
+            color="primary"
+            showFirstButton
+            showLastButton
+          />
+        </Stack>
+      </Box>
+    </Paper>
   );
 }

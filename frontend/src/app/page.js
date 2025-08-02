@@ -1,20 +1,36 @@
 "use client";
+import { Container, Typography, Box } from '@mui/material';
 import CustomerTable from "./components/CustomerTable";
 
 export default function Home() {
   return (
-    <main className="min-h-screen p-6 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500">
-      <div className="max-w-7xl mx-auto">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-white mb-2 drop-shadow-lg">
+    <Box className="dashboard-background">
+      <Container maxWidth="xl" sx={{ py: 4 }}>
+        <Box textAlign="center" mb={4}>
+          <Typography
+            variant="h4"
+            component="h1"
+            sx={{
+              color: 'white',
+              fontWeight: 700,
+              mb: 1,
+              textShadow: '0 2px 4px rgba(0,0,0,0.3)'
+            }}
+          >
             Customer Dashboard
-          </h1>
-          <p className="text-indigo-100 text-lg">
+          </Typography>
+          <Typography
+            variant="h6"
+            sx={{
+              color: 'rgba(255,255,255,0.9)',
+              fontWeight: 400
+            }}
+          >
             Manage your customers and track their orders
-          </p>
-        </div>
+          </Typography>
+        </Box>
         <CustomerTable />
-      </div>
-    </main>
+      </Container>
+    </Box>
   );
 }

@@ -1,5 +1,19 @@
 "use client";
 import { useState } from "react";
+import {
+  TableRow,
+  TableCell,
+  IconButton,
+  Avatar,
+  Typography,
+  Chip,
+  Button,
+  Box,
+  Collapse,
+  CircularProgress,
+  Stack
+} from '@mui/material';
+import { ExpandMore, ExpandLess } from '@mui/icons-material';
 import { fetchOrders } from "../lib/api";
 import OrdersTable from "./OrdersTable";
 import InlineStatusEditor from "./InlineStatusEditor";
@@ -9,13 +23,27 @@ export default function CustomerRow({ customer, index }) {
   const [loading, setLoading] = useState(false);
   const [orders, setOrders] = useState([]);
   const [editingStatus, setEditingStatus] = useState(false);
+  const [ordersError, setOrdersError] = useState(null);
 
   const toggleExpand = async () => {
     if (!expanded) {
       setLoading(true);
-      const data = await fetchOrders(customer.id);
-      setOrders(data);
-      setLoading(false);
+      setOrdersError(null);
+      
+      try {
+        const data = await fetchOrders(customer.id);
+        if (Array.isArray(data)) {
+          setOrders(data);
+        } else {
+          setOrders([]);
+          setOrdersError('Failed to load orders');
+        }
+      } catch (error) {
+        setOrders([]);
+        setOrdersError('Backend server is not running');
+      } finally {
+        setLoading(false);
+      }
     }
     setExpanded(!expanded);
   };
@@ -23,41 +51,51 @@ export default function CustomerRow({ customer, index }) {
   const getStatusColor = (status) => {
     switch (status?.toLowerCase()) {
       case 'active':
-        return 'bg-green-100 text-green-800 border-green-200';
-      case 'inactive':
-        return 'bg-red-100 text-red-800 border-red-200';
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+        return 'success';
+      case 'churned':
+        return 'error';
+      case 'prospect':
+        return 'warning';
       default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
+        return 'default';
     }
   };
 
   return (
     <>
-      <tr className={`hover:bg-indigo-50/50 transition-colors duration-200 ${index % 2 === 0 ? 'bg-white/30' : 'bg-gray-50/30'}`}>
-        <td className="px-6 py-4 whitespace-nowrap">
-          <button
+      <TableRow hover>
+        <TableCell>
+          <IconButton
             onClick={toggleExpand}
-            className="w-8 h-8 flex items-center justify-center rounded-full bg-indigo-100 hover:bg-indigo-200 text-indigo-600 transition-colors duration-200"
+            size="small"
+            color="primary"
           >
-            <span className={`transform transition-transform duration-200 ${expanded ? 'rotate-90' : ''}`}>
-              ▶
-            </span>
-          </button>
-        </td>
-        <td className="px-6 py-4 whitespace-nowrap">
-          <div className="flex items-center">
-            <div className="w-10 h-10 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold mr-3">
+            {expanded ? <ExpandLess /> : <ExpandMore />}
+          </IconButton>
+        </TableCell>
+        <TableCell>
+          <Box display="flex" alignItems="center">
+            <Avatar
+              sx={{
+                bgcolor: 'primary.main',
+                mr: 2,
+                width: 40,
+                height: 40
+              }}
+            >
               {customer.name?.charAt(0)?.toUpperCase()}
-            </div>
-            <div className="text-sm font-medium text-gray-900">{customer.name}</div>
-          </div>
-        </td>
-        <td className="px-6 py-4 whitespace-nowrap">
-          <div className="text-sm text-gray-600">{customer.email}</div>
-        </td>
-        <td className="px-6 py-4 whitespace-nowrap">
+            </Avatar>
+            <Typography variant="body2" fontWeight="medium">
+              {customer.name}
+            </Typography>
+          </Box>
+        </TableCell>
+        <TableCell>
+          <Typography variant="body2" color="text.secondary">
+            {customer.email}
+          </Typography>
+        </TableCell>
+        <TableCell>
           {editingStatus ? (
             <InlineStatusEditor
               status={customer.status}
@@ -68,49 +106,82 @@ export default function CustomerRow({ customer, index }) {
               onCancel={() => setEditingStatus(false)}
             />
           ) : (
-            <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full border ${getStatusColor(customer.status)}`}>
-              {customer.status}
-            </span>
+            <Chip
+              label={customer.status}
+              color={getStatusColor(customer.status)}
+              size="small"
+              variant="outlined"
+            />
           )}
-        </td>
-        <td className="px-6 py-4 whitespace-nowrap">
-          <div className="flex items-center">
-            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-2">
-              <span className="text-xs font-semibold text-blue-600">{customer.orderCount}</span>
-            </div>
-            <span className="text-sm text-gray-600">orders</span>
-          </div>
-        </td>
-        <td className="px-6 py-4 whitespace-nowrap">
-          <div className="text-sm font-semibold text-green-600">
+        </TableCell>
+        <TableCell>
+          <Box display="flex" alignItems="center">
+            <Avatar
+              sx={{
+                bgcolor: 'info.light',
+                width: 32,
+                height: 32,
+                mr: 1,
+                fontSize: '0.75rem'
+              }}
+            >
+              {customer.orderCount}
+            </Avatar>
+            <Typography variant="body2" color="text.secondary">
+              orders
+            </Typography>
+          </Box>
+        </TableCell>
+        <TableCell>
+          <Typography variant="body2" fontWeight="semibold" color="success.main">
             ${customer.revenue?.toLocaleString()}
-          </div>
-        </td>
-        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-          <button
+          </Typography>
+        </TableCell>
+        <TableCell>
+          <Button
+            variant="contained"
+            size="small"
             onClick={() => setEditingStatus(true)}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition-colors duration-200 font-medium"
+            sx={{ textTransform: 'none' }}
           >
             Edit
-          </button>
-        </td>
-      </tr>
-      {expanded && (
-        <tr className="bg-gradient-to-r from-indigo-50 to-purple-50">
-          <td colSpan={7} className="px-6 py-4">
-            {loading ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-                <span className="ml-3 text-gray-600">Loading orders...</span>
-              </div>
-            ) : (
-              <div className="bg-white/70 rounded-lg p-4 shadow-inner">
-                <OrdersTable orders={orders} />
-              </div>
-            )}
-          </td>
-        </tr>
-      )}
+          </Button>
+        </TableCell>
+      </TableRow>
+      <TableRow>
+        <TableCell colSpan={7} sx={{ py: 0 }}>
+          <Collapse in={expanded} timeout="auto" unmountOnExit>
+            <Box sx={{ py: 2 }}>
+              {loading ? (
+                <Box display="flex" justifyContent="center" alignItems="center" py={4}>
+                  <CircularProgress size={32} />
+                  <Typography variant="body2" color="text.secondary" sx={{ ml: 2 }}>
+                    Loading orders...
+                  </Typography>
+                </Box>
+              ) : ordersError ? (
+                <Box display="flex" flexDirection="column" alignItems="center" py={4}>
+                  <Typography variant="body2" color="error" gutterBottom>
+                    {ordersError}
+                  </Typography>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={toggleExpand}
+                    sx={{ textTransform: 'none', mt: 1 }}
+                  >
+                    Retry
+                  </Button>
+                </Box>
+              ) : (
+                <Box sx={{ backgroundColor: 'grey.50', borderRadius: 2, p: 2 }}>
+                  <OrdersTable orders={orders} />
+                </Box>
+              )}
+            </Box>
+          </Collapse>
+        </TableCell>
+      </TableRow>
     </>
   );
 }

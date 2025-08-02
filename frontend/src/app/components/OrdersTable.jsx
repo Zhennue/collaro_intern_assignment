@@ -1,82 +1,158 @@
 "use client";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  Typography,
+  Box,
+  Avatar,
+  Stack,
+  Chip
+} from '@mui/material';
+import { ShoppingBag } from '@mui/icons-material';
 import InlineSizeEditor from "./InlineSizeEditor";
 
 export default function OrdersTable({ orders }) {
   if (!orders || orders.length === 0) {
     return (
-      <div className="text-center py-8 text-gray-500">
-        <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+      <Box 
+        display="flex" 
+        flexDirection="column" 
+        alignItems="center" 
+        justifyContent="center" 
+        py={8}
+      >
+        <Avatar
+          sx={{
+            width: 64,
+            height: 64,
+            bgcolor: 'grey.100',
+            mb: 2,
+            fontSize: '2rem'
+          }}
+        >
           📦
-        </div>
-        <p>No orders found for this customer</p>
-      </div>
+        </Avatar>
+        <Typography variant="body1" color="text.secondary">
+          No orders found for this customer
+        </Typography>
+      </Box>
     );
   }
 
   return (
-    <div className="overflow-hidden rounded-lg border border-gray-200">
-      <table className="w-full bg-white">
-        <thead className="bg-gradient-to-r from-gray-100 to-gray-200">
-          <tr>
-            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-              Order ID
-            </th>
-            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-              Order Date
-            </th>
-            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-              Total Amount
-            </th>
-            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-              Items
-            </th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-gray-200">
+    <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid', borderColor: 'grey.200' }}>
+      <Table size="small">
+        <TableHead sx={{ backgroundColor: 'grey.100' }}>
+          <TableRow>
+            <TableCell>
+              <Typography variant="subtitle2" fontWeight="semibold">
+                Order ID
+              </Typography>
+            </TableCell>
+            <TableCell>
+              <Typography variant="subtitle2" fontWeight="semibold">
+                Order Date
+              </Typography>
+            </TableCell>
+            <TableCell>
+              <Typography variant="subtitle2" fontWeight="semibold">
+                Total Amount
+              </Typography>
+            </TableCell>
+            <TableCell>
+              <Typography variant="subtitle2" fontWeight="semibold">
+                Items
+              </Typography>
+            </TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
           {orders.map((order, index) => (
-            <tr key={order.orderId} className={`hover:bg-gray-50 transition-colors duration-200 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}`}>
-              <td className="px-4 py-3 whitespace-nowrap">
-                <div className="flex items-center">
-                  <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
-                    <span className="text-xs font-semibold text-blue-600">#</span>
-                  </div>
-                  <span className="text-sm font-medium text-gray-900">{order.orderId}</span>
-                </div>
-              </td>
-              <td className="px-4 py-3 whitespace-nowrap">
-                <span className="text-sm text-gray-600">
+            <TableRow key={order.orderId} hover>
+              <TableCell>
+                <Box display="flex" alignItems="center">
+                  <Avatar
+                    sx={{
+                      width: 32,
+                      height: 32,
+                      bgcolor: 'info.light',
+                      mr: 2,
+                      fontSize: '0.75rem'
+                    }}
+                  >
+                    #
+                  </Avatar>
+                  <Typography variant="body2" fontWeight="medium">
+                    {order.orderId}
+                  </Typography>
+                </Box>
+              </TableCell>
+              <TableCell>
+                <Typography variant="body2" color="text.secondary">
                   {new Date(order.orderDate).toLocaleDateString('en-US', {
                     year: 'numeric',
                     month: 'short',
                     day: 'numeric'
                   })}
-                </span>
-              </td>
-              <td className="px-4 py-3 whitespace-nowrap">
-                <span className="text-sm font-semibold text-green-600">
+                </Typography>
+              </TableCell>
+              <TableCell>
+                <Typography variant="body2" fontWeight="semibold" color="success.main">
                   ${order.totalAmount?.toLocaleString()}
-                </span>
-              </td>
-              <td className="px-4 py-3">
-                <div className="space-y-2">
+                </Typography>
+              </TableCell>
+              <TableCell>
+                <Stack spacing={1}>
                   {order.items.map((item) => (
-                    <div key={item.orderItemId} className="flex items-center justify-between bg-gray-50 rounded-lg p-2 border border-gray-200">
-                      <div className="flex items-center space-x-2">
-                        <div className="w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center">
-                          <span className="text-xs text-purple-600">🛍️</span>
-                        </div>
-                        <span className="text-sm text-gray-700">{item.itemName}</span>
-                        <span className="text-sm font-medium text-gray-900">${item.price}</span>
-                      </div>
+                    <Box
+                      key={item.orderItemId}
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        backgroundColor: 'grey.50',
+                        borderRadius: 2,
+                        p: 1.5,
+                        border: '1px solid',
+                        borderColor: 'grey.200'
+                      }}
+                    >
+                      <Box display="flex" alignItems="center" flex={1}>
+                        <Avatar
+                          sx={{
+                            width: 24,
+                            height: 24,
+                            bgcolor: 'secondary.light',
+                            mr: 1,
+                            fontSize: '0.75rem'
+                          }}
+                        >
+                          <ShoppingBag fontSize="small" />
+                        </Avatar>
+                        <Typography variant="body2" color="text.primary" sx={{ mr: 2 }}>
+                          {item.itemName}
+                        </Typography>
+                        <Chip
+                          label={`$${item.price}`}
+                          size="small"
+                          color="primary"
+                          variant="outlined"
+                        />
+                      </Box>
                       <InlineSizeEditor item={item} />
-                    </div>
+                    </Box>
                   ))}
-                </div>
-              </td>
-            </tr>
+                </Stack>
+              </TableCell>
+            </TableRow>
           ))}
-        </tbody>
-      </table>
-    </div>
+        </TableBody>
+      </Table>
+    </TableContainer>
   );
 }
